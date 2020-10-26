@@ -19,7 +19,7 @@ fn main() -> io::Result<()> {
 
     clear_terminal();
     println!("Initial state");
-    print_grid(&grid, false, Some((3,3)));
+    print_grid(&grid, false, None);
 
     let mut turn = 0;
     loop {
@@ -27,8 +27,9 @@ fn main() -> io::Result<()> {
         thread::sleep(Duration::from_millis(500));
 
         // Play turn
-        play_turn(&mut turn, &mut grid);
-        
+        let no_change = play_turn(&mut turn, &mut grid);
+        if no_change { break Ok(()) }
+
         // Show state
         clear_terminal();
         println!("Turn {} (Ctrl+C to quit)", turn);
@@ -36,7 +37,7 @@ fn main() -> io::Result<()> {
     }
 }
 
-fn play_turn(turn: &mut u16, grid: &mut Vec<Vec<bool>>) {
+fn play_turn(turn: &mut u16, grid: &mut Vec<Vec<bool>>) -> bool {
     let starting_state: Vec<Vec<bool>> = grid.clone();
     for l in 0..starting_state.len() {
         for c in 0..starting_state[l].len() {
@@ -44,6 +45,7 @@ fn play_turn(turn: &mut u16, grid: &mut Vec<Vec<bool>>) {
         }
     }
     *turn += 1;
+    return *grid == starting_state;
 }
 
 /// **Rules:**
@@ -245,16 +247,16 @@ fn place_cells(grid: &mut Vec<Vec<bool>>) {
 
     clear_terminal();
 
+    let mut cursor: (usize, usize) = (0,0);
+
     stdout.suspend_raw_mode().unwrap();
     // Print helper message
     println!("* Move around the grid with arrow keys");
     println!("* Toggle cell state by hitting the space bar on your keyboard");
     println!("* Hit return (⏎) to save");
     // Print grid
-    print_grid(&grid, true, None);
+    print_grid(&grid, true, Some(cursor));
     stdout.activate_raw_mode().unwrap();
-
-    let mut cursor: (usize, usize) = (0,0);
 
     loop {
         // Read input (if any)
