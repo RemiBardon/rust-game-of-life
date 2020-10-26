@@ -14,20 +14,12 @@ fn main() -> io::Result<()> {
     // Allow user to resize grid
     resize_grid(&mut grid);
 
-    // Add a block
-    grid[2][6] = true;
-    grid[2][7] = true;
-    grid[3][6] = true;
-    grid[3][7] = true;
-
-    // Add a blinker
-    grid[6][3] = true;
-    grid[6][4] = true;
-    grid[6][5] = true;
+    // Allow user to place and remove cells
+    place_cells(&mut grid);
 
     clear_terminal();
     println!("Initial state");
-    print_grid(&grid, false);
+    print_grid(&grid, false, Some((3,3)));
 
     let mut turn = 0;
     loop {
@@ -39,8 +31,8 @@ fn main() -> io::Result<()> {
         
         // Show state
         clear_terminal();
-        println!("Turn {}", turn);
-        print_grid(&grid, false);
+        println!("Turn {} (Ctrl+C to quit)", turn);
+        print_grid(&grid, false, None);
     }
 }
 
@@ -111,7 +103,7 @@ fn play_cell_turn(starting_state: &Vec<Vec<bool>>, grid: &mut Vec<Vec<bool>>, x:
 ///     ```
 /// 
 /// - **Warning:** Might have unwanted behavior with non-square grids.
-fn print_grid(grid: &Vec<Vec<bool>>, show_numbers: bool) {
+fn print_grid(grid: &Vec<Vec<bool>>, show_numbers: bool, cursor: Option<(usize, usize)>) {
     if show_numbers {
         let mut indices: Vec<Vec<char>> = vec![];
         for index in 0..grid[0].len() {
@@ -138,8 +130,13 @@ fn print_grid(grid: &Vec<Vec<bool>>, show_numbers: bool) {
         if show_numbers {
             print!("{:>3}", l);
         }
-        for cell in row {
-            print!("{}", if *cell { "■" } else { "□" });
+        for (c, cell) in row.iter().enumerate() {
+            match (cursor, *cell) {
+                (Some((x, y)), true) if (x,y) == (c,l) => print!("●"),
+                (Some((x, y)), false) if (x,y) == (c,l) => print!("○"),
+                (_, true) => print!("■"),
+                (_, false) => print!("□"),
+            }
         }
         println!("");
     }
@@ -183,12 +180,12 @@ fn resize_grid(grid: &mut Vec<Vec<bool>>) {
 
     clear_terminal();
 
-    // Print helper message
-    println!("Choose a grid size with arrow keys (currently {}x{})", grid.len(), grid[0].len());
-
-    // Print grid
     stdout.suspend_raw_mode().unwrap();
-    print_grid(&grid, true);
+    // Print helper message
+    println!("* Choose a grid size with arrow keys (currently {}x{})", grid.len(), grid[0].len());
+    println!("* Hit return (⏎) to save");
+    // Print grid
+    print_grid(&grid, true, None);
     stdout.activate_raw_mode().unwrap();
 
     loop {
@@ -221,12 +218,70 @@ fn resize_grid(grid: &mut Vec<Vec<bool>>) {
 
             clear_terminal();
 
-            // Print helper message
-            println!("Choose a grid size with arrow keys (currently {}x{})", grid.len(), grid[0].len());
-
-            // Print grid
             stdout.suspend_raw_mode().unwrap();
-            print_grid(&grid, true);
+            // Print helper message
+            println!("* Choose a grid size with arrow keys (currently {}x{})", grid.len(), grid[0].len());
+            println!("* Hit return (⏎) to save");
+            // Print grid
+            print_grid(&grid, true, None);
+            stdout.activate_raw_mode().unwrap();
+        }
+        thread::sleep(Duration::from_millis(50));
+    }
+
+    clear_terminal();
+
+    stdout.suspend_raw_mode().unwrap();
+}
+
+fn place_cells(grid: &mut Vec<Vec<bool>>) {
+    // Inspired by [How can I read one character from stdin without having to hit enter?](https://stackoverflow.com/a/55881770/10967642)
+
+    // Set terminal to raw mode to allow reading stdin one key at a time
+    let stdout = io::stdout().into_raw_mode().unwrap();
+
+    // Use asynchronous stdin
+    let mut stdin = termion::async_stdin().keys();
+
+    clear_terminal();
+
+    stdout.suspend_raw_mode().unwrap();
+    // Print helper message
+    println!("* Move around the grid with arrow keys");
+    println!("* Toggle cell state by hitting the space bar on your keyboard");
+    println!("* Hit return (⏎) to save");
+    // Print grid
+    print_grid(&grid, true, None);
+    stdout.activate_raw_mode().unwrap();
+
+    let mut cursor: (usize, usize) = (0,0);
+
+    loop {
+        // Read input (if any)
+        let input = stdin.next();
+
+        // If a key was pressed
+        if let Some(Ok(key)) = input {
+            match key {
+                // Exit if '⏎' is pressed
+                termion::event::Key::Char('\n') => break,
+                termion::event::Key::Up     if cursor.1 > 0                 => cursor.1 -= 1,
+                termion::event::Key::Down   if cursor.1 < grid.len()-1      => cursor.1 += 1,
+                termion::event::Key::Left   if cursor.0 > 0                 => cursor.0 -= 1,
+                termion::event::Key::Right  if cursor.0 < grid[0].len()-1   => cursor.0 += 1,
+                termion::event::Key::Char(' ') => grid[cursor.1][cursor.0] = !grid[cursor.1][cursor.0],
+                _ => {}
+            }
+
+            clear_terminal();
+
+            stdout.suspend_raw_mode().unwrap();
+            // Print helper message
+            println!("* Move around the grid with arrow keys");
+            println!("* Toggle cell state by hitting the space bar on your keyboard");
+            println!("* Hit return (⏎) to save");
+            // Print grid
+            print_grid(&grid, true, Some(cursor));
             stdout.activate_raw_mode().unwrap();
         }
         thread::sleep(Duration::from_millis(50));
