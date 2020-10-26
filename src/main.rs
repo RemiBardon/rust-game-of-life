@@ -1,17 +1,54 @@
-use std::cmp::{min, max};
+use std::cmp::min;
 
 fn main() {
     let width: usize = 8;
     let height: usize = 8;
 
     let mut grid: Vec<Vec<bool>> = empty_grid(width, height);
+
+    // Add a block
+    grid[2][6] = true;
     grid[2][7] = true;
+    grid[3][6] = true;
+    grid[3][7] = true;
+
+    // Add a blinker
+    grid[6][3] = true;
+    grid[6][4] = true;
+    grid[6][5] = true;
 
     print_grid(&grid, true);
 
-    println!("{} cell(s) around ({},{})", neighbour_count(&grid, 7, 2), 7, 2);
-    println!("{} cell(s) around ({},{})", neighbour_count(&grid, 7, 1), 7, 1);
-    println!("{} cell(s) around ({},{})", neighbour_count(&grid, 5, 1), 5, 1);
+    loop {
+        // Wait for a second
+        std::thread::sleep(std::time::Duration::from_millis(500));
+
+        play_turn(&mut grid);
+        print_grid(&grid, true);
+    }
+}
+
+fn play_turn(grid: &mut Vec<Vec<bool>>) {
+    let starting_state: Vec<Vec<bool>> = grid.clone();
+    for l in 0..starting_state.len() {
+        for c in 0..starting_state[l].len() {
+            play_cell_turn(&starting_state, grid, c, l);
+        }
+    }
+}
+
+/// **Rules:**
+/// 
+/// 1. Any live cell with two or three live neighbours survives.
+/// 2. Any dead cell with three live neighbours becomes a live cell.
+/// 3. All other live cells die in the next generation. Similarly, all other dead cells stay dead.
+fn play_cell_turn(starting_state: &Vec<Vec<bool>>, grid: &mut Vec<Vec<bool>>, x: usize, y: usize) {
+    match (starting_state[y][x], neighbour_count(starting_state, x, y)) {
+        (true, 2..=3) => {}, // Nothing happens
+        (true, _) => grid[y][x] = false,
+        (false, 3) => grid[y][x] = true,
+        (false, _) => {}, // Nothing happens
+    }
 }
 
 /// Pretty-prints a 2D boolean grid with `◼︎` and `◻︎` characters.
@@ -97,10 +134,12 @@ fn neighbour_count(grid: &Vec<Vec<bool>>, x: usize, y: usize) -> u8 {
     let mut count: u8 = 0;
 
     // Find lines and columns to go through
-    // `max` ensures we don't go under index `0`
-    // `min` ensures we don't go out of bounds
-    let line_range = max(y-1, 0)..=min(y+1, grid.len()-1);
-    let column_range = |l: usize| max(x-1, 0)..=min(x+1, grid[l].len()-1);
+    // `min_line` ensures we don't go under index `0`
+    let min_line = if y == 0 { 0 } else { y-1 };
+    // `min()` ensures we don't go out of bounds
+    let line_range = min_line..=min(y+1, grid.len()-1);
+    let min_column = if x == 0 { 0 } else { x-1 };
+    let column_range = |l: usize| min_column..=min(x+1, grid[l].len()-1);
 
     for l in line_range {
         for c in column_range(l) {
