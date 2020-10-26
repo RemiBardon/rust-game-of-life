@@ -25,19 +25,22 @@ fn main() -> io::Result<()> {
     grid[6][4] = true;
     grid[6][5] = true;
 
+    clear_terminal();
+    println!("Initial state");
+    print_grid(&grid, false);
+
     let mut turn = 0;
-
-    println!("\nInitial state");
-    print_grid(&grid, true);
-
     loop {
-        // Wait for a second
+        // Wait for half a second
         thread::sleep(Duration::from_millis(500));
 
+        // Play turn
         play_turn(&mut turn, &mut grid);
         
-        println!("\nTurn {}", turn);
-        print_grid(&grid, true);
+        // Show state
+        clear_terminal();
+        println!("Turn {}", turn);
+        print_grid(&grid, false);
     }
 }
 
@@ -172,13 +175,12 @@ fn resize_grid(grid: &mut Vec<Vec<bool>>) {
     // Inspired by [How can I read one character from stdin without having to hit enter?](https://stackoverflow.com/a/55881770/10967642)
 
     // Set terminal to raw mode to allow reading stdin one key at a time
-    let mut stdout = io::stdout().into_raw_mode().unwrap();
+    let stdout = io::stdout().into_raw_mode().unwrap();
 
     // Use asynchronous stdin
     let mut stdin = termion::async_stdin().keys();
 
-    // Clear terminal
-    write!(stdout, "{}{}", termion::clear::All, termion::cursor::Goto(1, 1)).unwrap();
+    clear_terminal();
 
     // Print helper message
     println!("Choose a grid size with arrow keys (currently {}x{})", grid.len(), grid[0].len());
@@ -216,8 +218,7 @@ fn resize_grid(grid: &mut Vec<Vec<bool>>) {
                 _ => {}
             }
 
-            // Clear terminal
-            write!(stdout, "{}{}", termion::clear::All, termion::cursor::Goto(1, 1)).unwrap();
+            clear_terminal();
 
             // Print helper message
             println!("Choose a grid size with arrow keys (currently {}x{})", grid.len(), grid[0].len());
@@ -230,10 +231,13 @@ fn resize_grid(grid: &mut Vec<Vec<bool>>) {
         thread::sleep(Duration::from_millis(50));
     }
 
-    // Clear terminal
-    write!(stdout, "{}{}", termion::clear::All, termion::cursor::Goto(1, 1)).unwrap();
+    clear_terminal();
 
     stdout.suspend_raw_mode().unwrap();
+}
+
+fn clear_terminal() {
+    write!(io::stdout(), "{}{}", termion::clear::All, termion::cursor::Goto(1, 1)).unwrap();
 }
 
 /// Instantiates a new grid filled with `false`.
