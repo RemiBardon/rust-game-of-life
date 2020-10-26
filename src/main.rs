@@ -1,10 +1,18 @@
 use std::cmp::min;
 
-fn main() {
-    let width: usize = 8;
-    let height: usize = 8;
+use std::io::{self,Write};
+use std::thread;
+use std::time::Duration;
 
-    let mut grid: Vec<Vec<bool>> = empty_grid(width, height);
+use termion;
+use termion::input::TermRead;
+use termion::raw::IntoRawMode;
+
+fn main() -> io::Result<()> {
+    let mut grid: Vec<Vec<bool>> = empty_grid(16, 16);
+
+    // Allow user to resize grid
+    resize_grid(&mut grid);
 
     // Add a block
     grid[2][6] = true;
@@ -19,14 +27,17 @@ fn main() {
 
     let mut turn = 0;
 
-    print_grid(&grid, turn, true);
+    println!("\nInitial state");
+    print_grid(&grid, true);
 
     loop {
         // Wait for a second
-        std::thread::sleep(std::time::Duration::from_millis(500));
+        thread::sleep(Duration::from_millis(500));
 
         play_turn(&mut turn, &mut grid);
-        print_grid(&grid, turn, true);
+        
+        println!("\nTurn {}", turn);
+        print_grid(&grid, true);
     }
 }
 
@@ -96,9 +107,7 @@ fn play_cell_turn(starting_state: &Vec<Vec<bool>>, grid: &mut Vec<Vec<bool>>, x:
 ///     ```
 /// 
 /// - **Warning:** Might have unwanted behavior with non-square grids.
-fn print_grid(grid: &Vec<Vec<bool>>, turn: u16, show_numbers: bool) {
-    println!("\nTurn {}", turn);
-
+fn print_grid(grid: &Vec<Vec<bool>>, show_numbers: bool) {
     if show_numbers {
         let mut indices: Vec<Vec<char>> = vec![];
         for index in 0..grid[0].len() {
@@ -157,6 +166,74 @@ fn neighbour_count(grid: &Vec<Vec<bool>>, x: usize, y: usize) -> u8 {
     }
 
     return count
+}
+
+fn resize_grid(grid: &mut Vec<Vec<bool>>) {
+    // Inspired by [How can I read one character from stdin without having to hit enter?](https://stackoverflow.com/a/55881770/10967642)
+
+    // Set terminal to raw mode to allow reading stdin one key at a time
+    let mut stdout = io::stdout().into_raw_mode().unwrap();
+
+    // Use asynchronous stdin
+    let mut stdin = termion::async_stdin().keys();
+
+    // Clear terminal
+    write!(stdout, "{}{}", termion::clear::All, termion::cursor::Goto(1, 1)).unwrap();
+
+    // Print helper message
+    println!("Choose a grid size with arrow keys (currently {}x{})", grid.len(), grid[0].len());
+
+    // Print grid
+    stdout.suspend_raw_mode().unwrap();
+    print_grid(&grid, true);
+    stdout.activate_raw_mode().unwrap();
+
+    loop {
+        // Read input (if any)
+        let input = stdin.next();
+
+        // If a key was pressed
+        if let Some(Ok(key)) = input {
+            match key {
+                // Exit if '⏎' is pressed
+                termion::event::Key::Char('\n') => break,
+                termion::event::Key::Up => {
+                    if grid.len() > 1 {
+                        *grid = empty_grid(grid[0].len(), grid.len()-1);
+                    }
+                }
+                termion::event::Key::Down => {
+                    *grid = empty_grid(grid[0].len(), grid.len()+1);
+                }
+                termion::event::Key::Left => {
+                    if grid[0].len() > 1 {
+                        *grid = empty_grid(grid[0].len()-1, grid.len());
+                    }
+                }
+                termion::event::Key::Right => {
+                    *grid = empty_grid(grid[0].len()+1, grid.len());
+                }
+                _ => {}
+            }
+
+            // Clear terminal
+            write!(stdout, "{}{}", termion::clear::All, termion::cursor::Goto(1, 1)).unwrap();
+
+            // Print helper message
+            println!("Choose a grid size with arrow keys (currently {}x{})", grid.len(), grid[0].len());
+
+            // Print grid
+            stdout.suspend_raw_mode().unwrap();
+            print_grid(&grid, true);
+            stdout.activate_raw_mode().unwrap();
+        }
+        thread::sleep(Duration::from_millis(50));
+    }
+
+    // Clear terminal
+    write!(stdout, "{}{}", termion::clear::All, termion::cursor::Goto(1, 1)).unwrap();
+
+    stdout.suspend_raw_mode().unwrap();
 }
 
 /// Instantiates a new grid filled with `false`.
