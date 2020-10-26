@@ -93,6 +93,7 @@ fn play_cell_turn(starting_state: &Vec<Vec<bool>>, grid: &mut Vec<Vec<bool>>, x:
 ///   * If `show_numbers` is set to `true`, function will print:
 ///     
 ///     ```txt
+///                    
 ///                  11
 ///        012345678901
 ///       0◻◻◻◻◻◻◻◻◻◻◻◻
