@@ -17,24 +17,27 @@ fn main() {
     grid[6][4] = true;
     grid[6][5] = true;
 
-    print_grid(&grid, true);
+    let mut turn = 0;
+
+    print_grid(&grid, turn, true);
 
     loop {
         // Wait for a second
         std::thread::sleep(std::time::Duration::from_millis(500));
 
-        play_turn(&mut grid);
-        print_grid(&grid, true);
+        play_turn(&mut turn, &mut grid);
+        print_grid(&grid, turn, true);
     }
 }
 
-fn play_turn(grid: &mut Vec<Vec<bool>>) {
+fn play_turn(turn: &mut u16, grid: &mut Vec<Vec<bool>>) {
     let starting_state: Vec<Vec<bool>> = grid.clone();
     for l in 0..starting_state.len() {
         for c in 0..starting_state[l].len() {
             play_cell_turn(&starting_state, grid, c, l);
         }
     }
+    *turn += 1;
 }
 
 /// **Rules:**
@@ -93,7 +96,9 @@ fn play_cell_turn(starting_state: &Vec<Vec<bool>>, grid: &mut Vec<Vec<bool>>, x:
 ///     ```
 /// 
 /// - **Warning:** Might have unwanted behavior with non-square grids.
-fn print_grid(grid: &Vec<Vec<bool>>, show_numbers: bool) {
+fn print_grid(grid: &Vec<Vec<bool>>, turn: u16, show_numbers: bool) {
+    println!("\nTurn {}", turn);
+
     if show_numbers {
         let mut indices: Vec<Vec<char>> = vec![];
         for index in 0..grid[0].len() {
