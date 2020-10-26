@@ -54,9 +54,9 @@ fn play_cell_turn(starting_state: &Vec<Vec<bool>>, grid: &mut Vec<Vec<bool>>, x:
     }
 }
 
-/// Pretty-prints a 2D boolean grid with `◼︎` and `◻︎` characters.
+/// Pretty-prints a 2D boolean grid with `■` and `□` characters.
 /// 
-/// * `grid` - 2D boolean grid, to be printed as `◼︎` and `◻︎`.
+/// * `grid` - 2D boolean grid, to be printed as `■` and `□`.
 /// * `show_numbers` - Show numbers around grid or not.
 /// 
 ///   * If `show_numbers` is set to `false`, function will print:
@@ -126,7 +126,7 @@ fn print_grid(grid: &Vec<Vec<bool>>, turn: u16, show_numbers: bool) {
             print!("{:>3}", l);
         }
         for cell in row {
-            print!("{}", if *cell { "◼︎" } else { "◻︎" });
+            print!("{}", if *cell { "■" } else { "□" });
         }
         println!("");
     }
